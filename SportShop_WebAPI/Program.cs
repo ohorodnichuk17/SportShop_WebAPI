@@ -17,7 +17,7 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-string connStr = builder.Configuration.GetConnectionString("DefaultConnection")!;
+string connStr = builder.Configuration.GetConnectionString("AzureDb")!;
 
 // Add services to the container.
 
@@ -45,30 +45,37 @@ var jwtOpts = builder.Configuration.GetSection(nameof(JwtOptions)).Get<JwtOption
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+   options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+   options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+   options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(o =>
 {
-    o.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtOpts.Issuer,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpts.Key)),
-        ClockSkew = TimeSpan.Zero
-    };
+   o.TokenValidationParameters = new TokenValidationParameters
+   {
+      ValidateIssuer = true,
+      ValidateAudience = false,
+      ValidateLifetime = true,
+      ValidateIssuerSigningKey = true,
+      ValidIssuer = jwtOpts.Issuer,
+      IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpts.Key)),
+      ClockSkew = TimeSpan.Zero
+   };
 });
 
 var app = builder.Build();
 
+// apply migrations (test)
+using (var scope = app.Services.CreateScope())
+{
+   var db = scope.ServiceProvider.GetRequiredService<SportShopDbContext>();
+   db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+   app.UseSwagger();
+   app.UseSwaggerUI();
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
